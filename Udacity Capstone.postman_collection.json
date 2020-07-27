@@ -1,0 +1,346 @@
+{
+	"info": {
+		"_postman_id": "718a8a4c-b2c7-4012-9d4e-b4324558223a",
+		"name": "Udacity Capstone API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Offline BookShop",
+			"item": [
+				{
+					"name": "Get categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:3003/groups/3be2e963-4e18-49ab-b016-9ce69a38df49",
+							"host": [
+								"localhost"
+							],
+							"port": "3003",
+							"path": [
+								"groups",
+								"3be2e963-4e18-49ab-b016-9ce69a38df49"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create a  category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6Ik9UZzVNMEkxTlRjeFJESXdPRUkyUmtNM016QkJNakUxTlRRMVJFUTNOa0ZCTVRaRVJEZ3pOZyJ9.eyJpc3MiOiJodHRwczovL3Rlc3QtZW5kcG9pbnQuYXV0aDAuY29tLyIsInN1YiI6ImF1dGgwfDVjYWQ4ZmJmYzRmZWMzMTBkZjE5NjMzNSIsImF1ZCI6Imh0dHBzOi8vdGVzdC1lbmRwb2ludC5hdXRoMC5jb20vYXBpL3YyLyIsImlhdCI6MTU1NDg3OTU0NywiZXhwIjoxNTU0OTY1OTQ3LCJhenAiOiJHcTEzTTlzTnZtaTFJWFFLa1cya2N3TndVN2l1T05lTCIsInNjb3BlIjoicmVhZDpjdXJyZW50X3VzZXIgdXBkYXRlOmN1cnJlbnRfdXNlcl9tZXRhZGF0YSBkZWxldGU6Y3VycmVudF91c2VyX21ldGFkYXRhIGNyZWF0ZTpjdXJyZW50X3VzZXJfbWV0YWRhdGEgY3JlYXRlOmN1cnJlbnRfdXNlcl9kZXZpY2VfY3JlZGVudGlhbHMgZGVsZXRlOmN1cnJlbnRfdXNlcl9kZXZpY2VfY3JlZGVudGlhbHMgdXBkYXRlOmN1cnJlbnRfdXNlcl9pZGVudGl0aWVzIiwiZ3R5IjoicGFzc3dvcmQifQ.lELOXpUCqyqdDX-rRQ9Udk9mp9f3xfH1JaGjhksXogI",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"New local\",\n\t\"description\": \"New local group description\"\n}"
+						},
+						"url": {
+							"raw": "localhost:3003/groups/",
+							"host": [
+								"localhost"
+							],
+							"port": "3003",
+							"path": [
+								"groups",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get all groups",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:3003/groups",
+							"host": [
+								"localhost"
+							],
+							"port": "3003",
+							"path": [
+								"groups"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "40238b3c-8ea2-48e0-a946-51b5c1c67a06",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "baa70fb5-432c-40ed-85e1-fa5f920a063a",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "Book shop",
+			"item": [
+				{
+					"name": "books",
+					"item": [
+						{
+							"name": "Create a book",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"name": "Content-Type",
+										"type": "text",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"title\": \"New image\"\n}"
+								},
+								"url": {
+									"raw": "https://{{apiId}}.execute-api.us-east-1.amazonaws.com/dev/groups/1/images",
+									"protocol": "https",
+									"host": [
+										"{{apiId}}",
+										"execute-api",
+										"us-east-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"dev",
+										"groups",
+										"1",
+										"images"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Books for a category",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"name": "Content-Type",
+										"type": "text",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnaXZlbl9uYW1lIjoiSXZhbiIsImZhbWlseV9uYW1lIjoiTXVzaGtldHlrIiwibmlja25hbWUiOiJpdmFuLm11c2hrZXRpayIsIm5hbWUiOiJJdmFuIE11c2hrZXR5ayIsInBpY3R1cmUiOiJodHRwczovL2xoNS5nb29nbGV1c2VyY29udGVudC5jb20vLTlFMzN4NG95YnZnL0FBQUFBQUFBQUFJL0FBQUFBQUFBR2JjL090SEFIWDlHbFBnL3Bob3RvLmpwZyIsImxvY2FsZSI6ImVuLUdCIiwidXBkYXRlZF9hdCI6IjIwMTktMDQtMDhUMjA6MTA6MDkuNjU2WiIsImVtYWlsIjoiaXZhbi5tdXNoa2V0aWtAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImlzcyI6Imh0dHBzOi8vdGVzdC1lbmRwb2ludC5hdXRoMC5jb20vIiwic3ViIjoiZ29vZ2xlLW9hdXRoMnwxMTEwMzM3OTg1NDUwMTAxMjU4NTUiLCJhdWQiOiJHcTEzTTlzTnZtaTFJWFFLa1cya2N3TndVN2l1T05lTCIsImlhdCI6MTU1NDc1NDIwOSwiZXhwIjoxNTU0NzkwMjA5LCJhdF9oYXNoIjoidUFjYkk0c0NSZ2xVb1lwYVdaYW5JQSIsIm5vbmNlIjoiYU1NNGE1WkMySWowflNxSlRiRzBhZUYzLmpNenh4OVkifQ.QgVnp19MxrNqLjNy0tF5UhARFDqIvUyI0ZintM10Row",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "https://{{apiId}}.execute-api.us-east-1.amazonaws.com/dev/groups/1/images",
+									"protocol": "https",
+									"host": [
+										"{{apiId}}",
+										"execute-api",
+										"us-east-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"dev",
+										"groups",
+										"1",
+										"images"
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"protocolProfileBehavior": {},
+					"_postman_isSubFolder": true
+				},
+				{
+					"name": "categories",
+					"item": [
+						{
+							"name": "Get all categories",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://{{apiId}}.execute-api.us-east-1.amazonaws.com/dev/groups",
+									"protocol": "https",
+									"host": [
+										"{{apiId}}",
+										"execute-api",
+										"us-east-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"dev",
+										"groups"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create a categorie",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"name": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"name\": \"CEET\",\n\t\"description\": \"Photos of Postman tool\"\n}"
+								},
+								"url": {
+									"raw": "https://{{apiId}}.execute-api.us-east-1.amazonaws.com/dev/groups/",
+									"protocol": "https",
+									"host": [
+										"{{apiId}}",
+										"execute-api",
+										"us-east-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"dev",
+										"groups",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Categorie",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "https://{{apiId}}.execute-api.us-east-1.amazonaws.com/dev/categories/56abb0ee-f44d-444b-884e-2521e3e46d3d",
+									"protocol": "https",
+									"host": [
+										"{{apiId}}",
+										"execute-api",
+										"us-east-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"dev",
+										"categories",
+										"56abb0ee-f44d-444b-884e-2521e3e46d3d"
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"protocolProfileBehavior": {},
+					"_postman_isSubFolder": true
+				}
+			],
+			"protocolProfileBehavior": {}
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "f3c5a750-80ee-4661-98b3-1859af7ba315",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "22909f43-b4d0-4f7e-abe4-6978e1d5a24d",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"id": "0787ddc1-b29d-4393-9293-845667803072",
+			"key": "apiId",
+			"value": ""
+		},
+		{
+			"id": "ae988969-1540-4df9-ae62-98d0fd3fa705",
+			"key": "helloApiId",
+			"value": ""
+		},
+		{
+			"id": "684c4e39-57eb-447b-afd0-a45d4939c3ac",
+			"key": "prodApiId",
+			"value": ""
+		},
+		{
+			"id": "39f6ebe2-9fa2-493a-92e7-337b4c309ac9",
+			"key": "authToken",
+			"value": ""
+		}
+	],
+	"protocolProfileBehavior": {}
+}

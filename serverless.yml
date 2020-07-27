@@ -1,0 +1,497 @@
+service:
+  name: serverless-book-shop
+plugins:
+  - serverless-webpack
+  #les 2 plugins ajoutés ici servent à faire la validation en utilisant les fchiers dans le modele.
+  #il faut installer ses plugin en utilisant les commandes npm install serverless-aws-documentation serverless-reqvalidator-plugin --save-dev
+  - serverless-reqvalidator-plugin #npm install serverless-reqvalidator-plugin
+  - serverless-aws-documentation #npm install serverless-aws-documentation
+  #Optimzation if our lambda function
+  - serverless-plugin-canary-deployments
+  - serverless-dynamodb-local
+  - serverless-offline
+  - serverless-iam-roles-per-function
+    #npm i --save serverless-plugin-canary-deployments
+    #npm install --save serverless-dynamodb-local
+    #npm install serverless-offline --save-dev
+  #This plugin allows to restrict permissions for just one of your function npm i --save-dev serverless-roles-per-function
+
+  
+#Added for lambda optimzation
+package:
+  individually: true
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+
+# ici on fournit les stages qui peuvent etre dev, prod etc... Ici dev est utilisé par defaut quand on ne fournit pas d'autres stages..
+#la region aussi peut etre forunie sinon on va déplyer dans la région par defaut us-east-1
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+
+#Added for making tracing the log for lambda and apiGateway 
+  tracing:
+    lambda: true
+    apiGateway: true
+    iamRoleStatements:
+      - Effect: 'Allow' # xray permissions (required)
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+#definition des variables d'environnements (nom de la table est fournit comme variable d'environnement)
+  environment:
+    CATEGORIES_TABLE: Categories-${self:provider.stage}
+    BOOKS_TABLE: Books-${self:provider.stage}
+  
+    BOOK_ID_INDEX: BookIdIndex
+   
+    BOOKS_S3_BUCKET: serverless-cloud-udagram-books-ourobadiou-${self:provider.stage}
+   
+    SIGNED_URL_EXPIRATION: 300
+    CONNECTIONS_TABLE: Connections-${self:provider.stage}
+  
+#custom est utilisé pour la validation des données avant l'envoi au serveur pour utiliser la fonction lambda
+custom:
+  topicName: booksTopic-${self:provider.stage}
+  ###########offline
+  serverless-offline:
+    port: 3003
+  dynamodb:
+    start:
+      port: 8000
+      inMemory: true
+      migrate: true
+  documentation:
+    api:
+      info:
+        version: v1.0.0
+        title: Udagram API
+        description: Serverless application for book corver
+    models:
+      - name: CategorieRequest
+        contentType: application/json
+        schema: ${file(models/create-categorie-request.json)}
+      - name: BookRequest
+        contentType: application/json
+        schema: ${file(models/create-book-request.json)}
+
+functions:
+
+###################################################################################################################
+#
+#                               function Update categorie
+#
+####################################################################################################################
+  UpdateCategorie:
+    handler: src/lambda/http/updateCategorie.handler
+    events:
+      - http:
+          method: patch
+          path: categories/{categorieId}
+          cors: true
+          #authorizer: RS256Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CATEGORIES_TABLE}
+
+      - Effect: 'Allow' # xray permissions (required)
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+ 
+###################################################################################################################
+#
+#                               RS256Auth function
+#
+####################################################################################################################
+  RS256Auth:
+    handler: src/lambda/auth/rs256Auth0Authorizer.handler
+
+###################################################################################################################
+#
+#                               SendNotification to S3 Bucket
+#
+####################################################################################################################
+  SendUploadNotifications:
+    environment:
+      STAGE: ${self:provider.stage}
+      API_ID:
+        Ref: WebsocketsApi
+    handler: src/lambda/s3/sendNotifications.handler
+    events:
+      - sns:
+          arn:
+            Fn::Join:
+              - ':'
+              - - arn:aws:sns
+                - Ref: AWS::Region
+                - Ref: AWS::AccountId
+                - ${self:custom.topicName}
+          topicName: ${self:custom.topicName}
+
+
+###################################################################################################################
+#
+#                               WebSocket Connection
+#
+####################################################################################################################
+  ConnectHandler:
+    handler: src/lambda/websocket/connect.handler
+    events:
+      - websocket:
+          route: $connect
+
+
+###################################################################################################################
+#
+#                              WebSocket disconnect
+#
+####################################################################################################################
+  DisconnectHandler:
+    handler: src/lambda/websocket/disconnect.handler
+    events:
+      - websocket:
+          route: $disconnect
+
+
+###################################################################################################################
+#
+#                               function delete Categorie
+#
+####################################################################################################################
+  DeleteCategorie:
+    handler: src/lambda/http/deleteCategorie.handler
+    events:
+      - http:
+          method: delete
+          path: categories/{categorieId}
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CATEGORIES_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.BOOKS_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.BOOKS_TABLE}/index/${self:provider.environment.BOOK_ID_INDEX}
+  
+
+###################################################################################################################
+#
+#                               function GetCategories
+#
+####################################################################################################################
+  GetCategories:
+    handler: src/lambda/http/getCategories.handler
+    events:
+      - http:
+          method: get
+          path: categories
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Scan
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CATEGORIES_TABLE}
+
+
+###################################################################################################################
+#
+#                              function create categorie
+#
+####################################################################################################################
+  CreateCategorie:
+    handler: src/lambda/http/createCategorie.handler
+    events:
+      - http:
+          method: post
+          path: categories
+          cors: true
+          #authorizer: RS256Auth # use RS256Auth
+
+######################################################################################################
+#
+#                      Resource make validation of our query before execute lambda function
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a new categorie
+            description: Create a new categorie
+            requestModels:
+              'application/json': CategorieRequest #the same name like custom models
+######################################################################################################
+#
+#                      Allow create Categorie function to put data into Dynamodb
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          #iamrole to put data into DynamoDB
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CATEGORIES_TABLE}
+
+###################################################################################################################
+#
+#                              function to get all book
+#
+####################################################################################################################
+  GetBooks:
+    handler: src/lambda/http/getBooks.handler
+    events:
+      - http:
+          method: get
+          path: categories/{categorieId}/books
+          cors: true
+  ######################################################################################################
+#
+#  iam role for GetBooks function. Allow to Scan, Query into BOOKS_TABLE using BOOKS_ID_INDEX 
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Scan
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.BOOKS_TABLE}/index/${self:provider.environment.BOOK_ID_INDEX}
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.BOOKS_TABLE}
+    
+
+###################################################################################################################
+#
+#                              function create book
+#
+####################################################################################################################
+  CreateBook:
+    handler: src/lambda/http/createBook.handler
+    events:
+      - http:
+          method: post
+          path: categories/{categorieId}/books
+          cors: true
+          # this allow to do Authorization by token
+           #authorizer: Auth ici on utilise HS256
+          #authorizer: RS256Auth #ici on utilise RS256 avec le fichier rs256Auth0Authorizer et la focntion déclarée dans ce fichier
+
+  ######################################################################################################
+#
+#  Making validation for CreateBook request before sending execute lambda function
+
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a new books
+            description: Create a new books
+            requestModels:
+              'application/json': BookRequest #the same name like custom models
+
+######################################################################################################
+#
+#   iamRole for CreateBook function. Allow to PutItem and query into categorieTable. This can also allow
+#   to Put en Get object into S3 bucket 
+
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.BOOKS_TABLE}/index/${self:provider.environment.BOOK_ID_INDEX}
+      - Effect: Allow 
+        Action:
+          - s3:PutObject
+          - s3:GetObject
+        Resource: 'arn:aws:s3:::${self:provider.environment.BOOKS_S3_BUCKET}/*'
+    
+
+###################################################################################################################
+#
+#                              function to get on book
+#
+####################################################################################################################
+  GetBook:
+    handler: src/lambda/http/getBook.handler
+    events:
+      - http:
+          method: get
+          path: books/{bookId}
+          cors: true
+  ######################################################################################################
+#
+#   iamRole for GetBook function with allow user to get one book from Books table
+
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.BOOKS_TABLE}/index/${self:provider.environment.BOOK_ID_INDEX}
+
+resources:
+  Resources:
+    
+###################################################################################################################
+#
+#                              Resource to make authorization
+#
+####################################################################################################################
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+   
+###################################################################################################################
+#
+#                              Resource for categories Table
+#
+####################################################################################################################
+    CategoriesDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.CATEGORIES_TABLE}
+
+
+###################################################################################################################
+#
+#                              Resource for books Table
+#
+####################################################################################################################
+    BooksDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: categorieId
+            AttributeType: S
+          - AttributeName: bookId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: categorieId
+            KeyType: HASH
+
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.BOOK_ID_INDEX} #un index to make filter faster
+            KeySchema:
+            - AttributeName: bookId
+              KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.BOOKS_TABLE}
+  
+###################################################################################################################
+#
+#                              Resource make validation of our query before send it to the lambda function
+#
+####################################################################################################################
+    RequestBodyValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+####################################################################################################################
+#
+#   BOOKS_S3_BUCKET RESOURCE
+#
+#######################################################################################################################
+
+    AttachmentsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.BOOKS_S3_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            -
+              AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              MaxAge: 3000
+   ######################################################################################################
+#
+#   Hive permission to S3 bucket to call lambda function
+        
+    SendUploadNotificationsPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName: !Ref SendUploadNotificationsLambdaFunction
+        Principal: s3.amazonaws.com
+        Action: lambda:InvokeFunction
+        SourceAccount: !Ref AWS::AccountId
+        SourceArn: arn:aws:s3:::${self:provider.environment.BOOKS_S3_BUCKET}   
+         
+  ######################################################################################################
+#
+#   Policies for BOOKS_S3_BUCKET
+
+    BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        PolicyDocument:
+          Id: MyPolicy
+          Version: "2012-10-17"
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: 'arn:aws:s3:::${self:provider.environment.BOOKS_S3_BUCKET}/*'
+        Bucket: !Ref AttachmentsBucket
+    ######################################################################################################
+#
+#   # this allow S3 to send event du Topic
+
+    SNSTopicPolicy:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: "*"
+              Action: sns:Publish
+              Resource:
+                !Ref BooksTopic
+              Condition:
+                ArnLike:
+                  AWS:SourceArn: arn:aws:s3:::${self:provider.environment.BOOKS_S3_BUCKET}
+        Topics:
+          - !Ref BooksTopic
+
+    BooksTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: Book bucket topic
+        TopicName: ${self:custom.topicName}
